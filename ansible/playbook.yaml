@@ -1,23 +1,73 @@
 ---
-- name: Install Docker
-  hosts: your_target_hosts
-  become: yes
-
+- name: Install Docker and Jenkins on Ubuntu
+  hosts: jenkins 
+  become: true  # Run tasks with sudo
   tasks:
     - name: Update apt package cache
       apt:
         update_cache: yes
+      ignore_errors: yes
 
-    - name: Install required packages
+    - name: Install dependencies
       apt:
         name: "{{ item }}"
         state: present
       loop:
-        - docker.io
-        - docker-compose
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - software-properties-common
+        - wget
+        - rpm 
+    
 
-    - name: Start and enable Docker service
-      service:
-        name: docker
-        state: started
-        enabled: yes
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+
+    - name: Add Docker APT repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+    
+    - name: install docker
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+        - docker-buildx-plugin
+        - docker-compose-plugin
+    
+    - name: Installing Java and Fontconfig
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - fontconfig
+        - openjdk-17-jre
+    
+    - name: Ensure the destination directory exists
+      file:
+        path: /usr/share/keyrings/jenkins-keyring.asc
+        state: directory
+        mode: '0755'          
+          
+    - name: Downloads Jenkins URL repo
+      get_url: 
+        url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+        dest: /usr/share/keyrings/jenkins-keyring.asc
+        mode: '0644'
+
+    - name: Add Jenkins APT repository
+      ansible.builtin.shell:
+        cmd: "echo 'deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian binary/' | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null"
+  
+    - name: apt update
+      apt:
+        update_cache: yes
+    - name: Installing Jenkins
+      apt: 
+        name: jenkins
+        state: present

@@ -1,0 +1,6 @@
+all:
+  hosts:
+    jenkins:
+      ansible_host: 18.141.183.40
+      ansible_user: ubuntu
+      ansible_ssh_private_key_file: jenkins.pem
